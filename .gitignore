@@ -1,5 +1,26 @@
-*/bin
-*/obj
-MewAgent/appsettings.json
-MewAgent/bin
-MewAgent/obj
+# Build outputs
+bin/
+obj/
+
+*/bin/
+*/obj/
+
+# Visual Studio
+.vs/
+
+# User files
+*.user
+
+# NuGet
+*.nuget.props
+*.nuget.targets
+
+# Logs
+*.log
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Environment (uncomment to protect API keys)
+# appsettings.json

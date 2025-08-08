@@ -4,6 +4,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.SemanticKernel;
 using Microsoft.SemanticKernel.ChatCompletion;
 using Microsoft.SemanticKernel.Connectors.OpenAI;
+using System.Net.Http;
 
 namespace MewAgent.Services;
 
@@ -11,7 +12,7 @@ public class MewAgentService
 {
     private readonly ILogger<MewAgentService> _logger;
     private readonly IConfiguration _configuration;
-    private readonly HybridMcpService _hybridMcpService;
+    private readonly SimpleMcpService _mcpService;
     private readonly Kernel _kernel;
     private readonly IChatCompletionService _chatService;
     private readonly ChatHistory _chatHistory;
@@ -36,40 +37,53 @@ When users want to cook, be encouraging and suggest complementary activities lik
 
     public MewAgentService(
         IConfiguration configuration,
-        HybridMcpService hybridMcpService,
+        SimpleMcpService mcpService,
         ILogger<MewAgentService> logger)
     {
         _configuration = configuration;
-        _hybridMcpService = hybridMcpService;
+        _mcpService = mcpService;
         _logger = logger;
 
-        // Build the kernel
         var builder = Kernel.CreateBuilder();
         
-        // Add OpenAI chat completion
         var apiKey = configuration["OpenAI:ApiKey"] ?? throw new InvalidOperationException("OpenAI API key not configured");
         var modelId = configuration["OpenAI:ModelId"] ?? "gpt-4";
+        var endpoint = configuration["OpenAI:Endpoint"];
         
-        builder.AddOpenAIChatCompletion(modelId, apiKey);
+        if (!string.IsNullOrEmpty(endpoint))
+        {
+            var httpClient = new HttpClient
+            {
+                BaseAddress = new Uri(endpoint)
+            };
+            
+            builder.AddOpenAIChatCompletion(
+                modelId: modelId,
+                apiKey: apiKey,
+                httpClient: httpClient);
+            
+            _logger.LogInformation("Using custom LLM endpoint: {Endpoint} with model: {Model}", endpoint, modelId);
+        }
+        else
+        {
+            builder.AddOpenAIChatCompletion(modelId, apiKey);
+            _logger.LogInformation("Using standard OpenAI with model: {Model}", modelId);
+        }
         
         _kernel = builder.Build();
-        
-        // Plugin will be loaded async in InitializeAsync method
-        
-        // Get chat service
         _chatService = _kernel.GetRequiredService<IChatCompletionService>();
         
-        // Initialize chat history with system prompt
         _chatHistory = new ChatHistory();
         _chatHistory.AddSystemMessage(SystemPrompt);
         
-        _logger.LogInformation("Mew Agent initialized with model: {Model}", modelId);
+        _logger.LogInformation("Mew Agent initialized successfully");
     }
 
     public async Task InitializeAsync()
     {
-        // Register the MCP/HTTP hybrid plugin
-        var plugin = await _hybridMcpService.CreatePluginAsync();
+        _logger.LogInformation("Loading MCP plugins...");
+        
+        var plugin = await _mcpService.CreatePluginAsync();
         if (plugin != null)
         {
             _kernel.Plugins.Add(plugin);
@@ -88,10 +102,8 @@ When users want to cook, be encouraging and suggest complementary activities lik
         {
             _logger.LogInformation("Processing user message: {Message}", userMessage);
             
-            // Add user message to history
             _chatHistory.AddUserMessage(userMessage);
             
-            // Configure execution settings for function calling
             var executionSettings = new OpenAIPromptExecutionSettings
             {
                 ToolCallBehavior = ToolCallBehavior.AutoInvokeKernelFunctions,
@@ -99,13 +111,11 @@ When users want to cook, be encouraging and suggest complementary activities lik
                 MaxTokens = _configuration.GetValue<int>("Agent:MaxTokens", 4000)
             };
             
-            // Get response from AI with automatic function calling
             var response = await _chatService.GetChatMessageContentAsync(
                 _chatHistory,
                 executionSettings,
                 _kernel);
             
-            // Add assistant response to history
             _chatHistory.AddAssistantMessage(response.Content ?? string.Empty);
             
             _logger.LogInformation("Generated response with {Length} characters", response.Content?.Length ?? 0);
@@ -128,11 +138,6 @@ When users want to cook, be encouraging and suggest complementary activities lik
 
     public int GetHistoryCount()
     {
-        return _chatHistory.Count - 1; // Subtract system message
-    }
-
-    public async Task<bool> CheckConnectionAsync()
-    {
-        return await _hybridMcpService.CheckConnectionAsync();
+        return _chatHistory.Count - 1;
     }
 }
