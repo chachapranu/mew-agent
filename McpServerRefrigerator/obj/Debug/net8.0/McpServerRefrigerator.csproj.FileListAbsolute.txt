@@ -86,3 +86,4 @@
 /home/chachapranu/work/git/mew-agent/McpServerRefrigerator/obj/Debug/net8.0/McpServerRefrigerator.pdb
 /home/chachapranu/work/git/mew-agent/McpServerRefrigerator/obj/Debug/net8.0/McpServerRefrigerator.genruntimeconfig.cache
 /home/chachapranu/work/git/mew-agent/McpServerRefrigerator/obj/Debug/net8.0/ref/McpServerRefrigerator.dll
+/home/chachapranu/work/git/mew-agent/McpServerRefrigerator/obj/Debug/net8.0/McpServerRefrigerator.sourcelink.json

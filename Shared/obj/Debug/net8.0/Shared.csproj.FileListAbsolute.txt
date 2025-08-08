@@ -20,3 +20,4 @@
 /home/chachapranu/work/git/mew-agent/Shared/obj/Debug/net8.0/refint/Shared.dll
 /home/chachapranu/work/git/mew-agent/Shared/obj/Debug/net8.0/Shared.pdb
 /home/chachapranu/work/git/mew-agent/Shared/obj/Debug/net8.0/ref/Shared.dll
+/home/chachapranu/work/git/mew-agent/Shared/obj/Debug/net8.0/Shared.sourcelink.json

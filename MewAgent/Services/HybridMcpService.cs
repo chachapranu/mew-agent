@@ -2,6 +2,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using Microsoft.SemanticKernel;
 using ModelContextProtocol.Client;
+// Add this at the top of your file if you know the namespace
 
 namespace MewAgent.Services;
 
