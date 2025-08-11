@@ -1,0 +1,17 @@
+[Unit]
+Description=Mew Agent - Smart Home AI Assistant
+After=network.target
+
+[Service]
+Type=simple
+User=YOUR_USERNAME
+WorkingDirectory=/home/YOUR_USERNAME/mew-agent/MewAgent
+ExecStart=/usr/bin/dotnet run
+Restart=on-failure
+RestartSec=10
+StandardOutput=journal
+StandardError=journal
+Environment="DOTNET_ROOT=/usr/share/dotnet"
+
+[Install]
+WantedBy=multi-user.target

@@ -1,8 +1,8 @@
-# Mew Agent - Smart Home AI Assistant
+# Mew Agent - Console AI Assistant for Ubuntu
 
-A modern AI agent built with Microsoft Semantic Kernel and Model Context Protocol (MCP) that demonstrates proper agent orchestration with real MCP server integration.
+A pure console application built with Microsoft Semantic Kernel and Model Context Protocol (MCP). Designed for desktop/terminal use on Ubuntu and other Linux systems. No web hosting or browser required.
 
-## Quick Start
+## Quick Start (Ubuntu/Linux)
 
 ### Prerequisites
 - .NET 8 SDK
@@ -189,4 +189,4 @@ This project showcases:
 - **Async/Await Patterns** throughout the application
 - **Dependency Injection** for testable, modular design
 
-Perfect for learning AI agent development with .NET!
+Perfect for learning AI agent development with .NET on Linux desktop environments!

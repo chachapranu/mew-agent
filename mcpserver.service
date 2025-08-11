@@ -1,0 +1,17 @@
+[Unit]
+Description=MCP Server - Smart Refrigerator
+After=network.target
+
+[Service]
+Type=simple
+User=YOUR_USERNAME
+WorkingDirectory=/home/YOUR_USERNAME/mew-agent/McpServerRefrigerator
+ExecStart=/usr/bin/dotnet run --urls="http://localhost:5100"
+Restart=on-failure
+RestartSec=10
+StandardOutput=journal
+StandardError=journal
+Environment="DOTNET_ROOT=/usr/share/dotnet"
+
+[Install]
+WantedBy=multi-user.target

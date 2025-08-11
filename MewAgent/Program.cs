@@ -1,6 +1,5 @@
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using MewAgent.Services;
 
@@ -10,13 +9,65 @@ class Program
 {
     static async Task Main(string[] args)
     {
-        var host = CreateHostBuilder(args).Build();
+        // simple dependency injection setup without hosting
+        var services = ConfigureServices();
+        var serviceProvider = services.BuildServiceProvider();
         
-        var logger = host.Services.GetRequiredService<ILogger<Program>>();
-        var agent = host.Services.GetRequiredService<MewAgentService>();
+        var logger = serviceProvider.GetRequiredService<ILogger<Program>>();
+        var agent = serviceProvider.GetRequiredService<MewAgentService>();
         
-        await agent.InitializeAsync();
+        logger.LogInformation("Starting Mew Agent...");
         
+        try
+        {
+            await agent.InitializeAsync();
+            await RunConsoleLoop(agent, logger);
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Fatal error occurred");
+            Console.WriteLine($"Error: {ex.Message}");
+        }
+        finally
+        {
+            serviceProvider.Dispose();
+        }
+    }
+    
+    static IServiceCollection ConfigureServices()
+    {
+        var services = new ServiceCollection();
+        
+        // load configuration
+        var configuration = new ConfigurationBuilder()
+            .SetBasePath(Directory.GetCurrentDirectory())
+            .AddJsonFile("appsettings.json", optional: false, reloadOnChange: true)
+            .AddEnvironmentVariables()
+            .Build();
+        
+        // register configuration
+        services.AddSingleton<IConfiguration>(configuration);
+        
+        // register logging
+        services.AddLogging(builder =>
+        {
+            builder.AddConsole();
+            builder.SetMinimumLevel(LogLevel.Information);
+        });
+        
+        // register http client for mcp
+        services.AddHttpClient<McpClientService>();
+        
+        // register application services
+        services.AddSingleton<McpClientService>();
+        services.AddSingleton<MewAgentService>();
+        
+        return services;
+    }
+    
+    static async Task RunConsoleLoop(MewAgentService agent, ILogger<Program> logger)
+    {
+        Console.Clear();
         Console.WriteLine("Mew Agent - Smart Refrigerator Assistant");
         Console.WriteLine("=========================================");
         Console.WriteLine();
@@ -33,44 +84,35 @@ class Program
             if (string.IsNullOrWhiteSpace(input))
                 continue;
             
+            // handle commands
             if (input.StartsWith("/"))
             {
-                if (!await HandleCommand(input, agent))
+                if (!HandleCommand(input, agent))
                     break;
                 continue;
             }
             
-            Console.ForegroundColor = ConsoleColor.Cyan;
-            Console.Write("\nMew: ");
-            Console.ResetColor();
-            
-            var response = await agent.ProcessMessageAsync(input);
-            Console.WriteLine(response);
+            // process user message
+            try
+            {
+                Console.ForegroundColor = ConsoleColor.Cyan;
+                Console.Write("\nMew: ");
+                Console.ResetColor();
+                
+                var response = await agent.ProcessMessageAsync(input);
+                Console.WriteLine(response);
+            }
+            catch (Exception ex)
+            {
+                logger.LogError(ex, "Error processing message");
+                Console.ForegroundColor = ConsoleColor.Red;
+                Console.WriteLine($"Error: {ex.Message}");
+                Console.ResetColor();
+            }
         }
         
         Console.WriteLine("\nGoodbye! Thanks for using Mew Agent.");
     }
-    
-    static IHostBuilder CreateHostBuilder(string[] args) =>
-        Host.CreateDefaultBuilder(args)
-            .ConfigureAppConfiguration((context, config) =>
-            {
-                config.AddJsonFile("appsettings.json", optional: false, reloadOnChange: true)
-                      .AddEnvironmentVariables();
-            })
-            .ConfigureServices((context, services) =>
-            {
-                services.AddHttpClient<McpClientService>();
-                services.AddSingleton<McpClientService>();
-                services.AddSingleton<MewAgentService>();
-                
-                services.AddLogging(builder =>
-                {
-                    builder.ClearProviders()
-                           .AddConsole()
-                           .SetMinimumLevel(LogLevel.Information);
-                });
-            });
     
     static void ShowHelp()
     {
@@ -86,10 +128,9 @@ class Program
         Console.WriteLine("  - What food do I have?");
         Console.WriteLine("  - Suggest a recipe for dinner");
         Console.WriteLine("  - Check the system diagnostics");
-        Console.WriteLine("  - I want to cook for 2 hours");
     }
     
-    static async Task<bool> HandleCommand(string command, MewAgentService agent)
+    static bool HandleCommand(string command, MewAgentService agent)
     {
         switch (command.ToLower())
         {
@@ -99,11 +140,11 @@ class Program
                 
             case "/tools":
                 Console.WriteLine("\nAvailable Tools:");
-                Console.WriteLine("  • GetTemperature - Get current refrigerator and freezer temperature settings");
-                Console.WriteLine("  • SetTemperature - Set refrigerator and/or freezer temperature");
-                Console.WriteLine("  • GetDiagnostics - Get system health and maintenance information");
-                Console.WriteLine("  • GetInventory - Get current food inventory in the refrigerator");
-                Console.WriteLine("  • GetRecipeSuggestions - Get recipe suggestions based on available ingredients");
+                Console.WriteLine("  - GetTemperature: Check refrigerator and freezer temperatures");
+                Console.WriteLine("  - SetTemperature: Adjust temperature settings");
+                Console.WriteLine("  - GetDiagnostics: View system health and maintenance info");
+                Console.WriteLine("  - GetInventory: Check food inventory");
+                Console.WriteLine("  - GetRecipeSuggestions: Get recipe ideas based on ingredients");
                 return true;
                 
             case "/memory":
@@ -121,7 +162,7 @@ class Program
                 
             default:
                 Console.WriteLine($"Unknown command: {command}");
-                Console.WriteLine("   Type /help for available commands");
+                Console.WriteLine("Type /help for available commands");
                 return true;
         }
     }
