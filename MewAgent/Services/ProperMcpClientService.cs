@@ -6,22 +6,22 @@ using Shared;
 
 namespace MewAgent.Services;
 
-// proper MCP client service that connects to actual MCP server
-public class McpClientService
+// MCP client service that uses proper MCP pattern but connects to HTTP server
+// This bridges our existing HTTP server to the MCP client approach
+public class ProperMcpClientService
 {
-    private readonly ILogger<McpClientService> _logger;
+    private readonly ILogger<ProperMcpClientService> _logger;
     private readonly IConfiguration _configuration;
     private readonly HttpClient _httpClient;
     private readonly string _mcpServerUrl;
 
-    public McpClientService(
+    public ProperMcpClientService(
         IConfiguration configuration,
-        HttpClient httpClient,
-        ILogger<McpClientService> logger)
+        ILogger<ProperMcpClientService> logger)
     {
         _configuration = configuration;
-        _httpClient = httpClient;
         _logger = logger;
+        _httpClient = new HttpClient();
         _mcpServerUrl = configuration["McpServer:BaseUrl"] ?? "http://localhost:5100";
     }
 
@@ -32,14 +32,7 @@ public class McpClientService
         try
         {
             // discover available tools from MCP server
-            var toolsResponse = await _httpClient.GetAsync($"{_mcpServerUrl}/api/mcp/tools");
-            toolsResponse.EnsureSuccessStatusCode();
-            
-            var toolsJson = await toolsResponse.Content.ReadAsStringAsync();
-            var tools = JsonSerializer.Deserialize<List<ToolDefinition>>(toolsJson, new JsonSerializerOptions
-            {
-                PropertyNameCaseInsensitive = true
-            });
+            var tools = await ListToolsAsync();
 
             if (tools == null || !tools.Any())
             {
@@ -70,6 +63,28 @@ public class McpClientService
         {
             _logger.LogError(ex, "Failed to create MCP plugin from server: {Url}", _mcpServerUrl);
             throw;
+        }
+    }
+
+    private async Task<List<ToolDefinition>> ListToolsAsync()
+    {
+        try
+        {
+            var toolsResponse = await _httpClient.GetAsync($"{_mcpServerUrl}/api/mcp/tools");
+            toolsResponse.EnsureSuccessStatusCode();
+            
+            var toolsJson = await toolsResponse.Content.ReadAsStringAsync();
+            var tools = JsonSerializer.Deserialize<List<ToolDefinition>>(toolsJson, new JsonSerializerOptions
+            {
+                PropertyNameCaseInsensitive = true
+            });
+
+            return tools ?? new List<ToolDefinition>();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to list tools from MCP server");
+            return new List<ToolDefinition>();
         }
     }
 
@@ -138,6 +153,9 @@ public class McpClientService
             return $"Error calling tool {toolName}: {ex.Message}";
         }
     }
-}
 
-// using shared models from Shared project
+    public void Dispose()
+    {
+        _httpClient?.Dispose();
+    }
+}

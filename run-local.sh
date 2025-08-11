@@ -3,6 +3,8 @@
 # Simple script to run Mew Agent locally on Ubuntu
 # Starts both MCP server and agent
 
+export PATH="$HOME/.dotnet:$PATH"
+
 echo "Starting Mew Agent System..."
 
 # start mcp server in background

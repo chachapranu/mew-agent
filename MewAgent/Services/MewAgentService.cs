@@ -12,7 +12,7 @@ public class MewAgentService
 {
     private readonly ILogger<MewAgentService> _logger;
     private readonly IConfiguration _configuration;
-    private readonly McpClientService _mcpClientService;
+    private readonly ProperMcpClientService _mcpClientService;
     private readonly Kernel _kernel;
     private readonly IChatCompletionService _chatService;
     private readonly ChatHistory _chatHistory;
@@ -38,7 +38,7 @@ When users want to cook, be encouraging and suggest complementary activities lik
 
     public MewAgentService(
         IConfiguration configuration,
-        McpClientService mcpClientService,
+        ProperMcpClientService mcpClientService,
         ILogger<MewAgentService> logger)
     {
         _configuration = configuration;

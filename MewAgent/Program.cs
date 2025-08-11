@@ -55,11 +55,8 @@ class Program
             builder.SetMinimumLevel(LogLevel.Information);
         });
         
-        // register http client for mcp
-        services.AddHttpClient<McpClientService>();
-        
         // register application services
-        services.AddSingleton<McpClientService>();
+        services.AddSingleton<ProperMcpClientService>();
         services.AddSingleton<MewAgentService>();
         
         return services;
