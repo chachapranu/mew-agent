@@ -5,17 +5,18 @@ namespace McpServerRefrigerator.Services;
 public class RefrigeratorService
 {
     private readonly ILogger<RefrigeratorService> _logger;
-    private readonly Random _random = new();
+    private readonly Random _random = new Random();
     
     private TemperatureSettings _temperatureSettings = new();
     private SystemDiagnostics _diagnostics = new();
-    private readonly List<InventoryItem> _inventory = new()
+    // Default fridge inventory - probably should load from database later
+    private readonly List<InventoryItem> _inventory = new List<InventoryItem>()
     {
-        new() { Name = "Milk", Quantity = 1, Unit = "gallon", ExpirationDate = DateTime.Now.AddDays(7) },
-        new() { Name = "Eggs", Quantity = 12, Unit = "count", ExpirationDate = DateTime.Now.AddDays(14) },
-        new() { Name = "Cheese", Quantity = 2, Unit = "pounds", ExpirationDate = DateTime.Now.AddDays(21) },
-        new() { Name = "Lettuce", Quantity = 1, Unit = "head", ExpirationDate = DateTime.Now.AddDays(5) },
-        new() { Name = "Chicken", Quantity = 3, Unit = "pounds", ExpirationDate = DateTime.Now.AddDays(3) }
+        new InventoryItem() { Name = "Milk", Quantity = 1, Unit = "gallon", ExpirationDate = DateTime.Now.AddDays(7) },
+        new InventoryItem() { Name = "Eggs", Quantity = 12, Unit = "count", ExpirationDate = DateTime.Now.AddDays(14) },
+        new InventoryItem() { Name = "Cheese", Quantity = 2, Unit = "pounds", ExpirationDate = DateTime.Now.AddDays(21) },
+        new InventoryItem() { Name = "Lettuce", Quantity = 1, Unit = "head", ExpirationDate = DateTime.Now.AddDays(5) },
+        new InventoryItem() { Name = "Chicken", Quantity = 3, Unit = "pounds", ExpirationDate = DateTime.Now.AddDays(3) }
     };
 
     public RefrigeratorService(ILogger<RefrigeratorService> logger)
@@ -37,18 +38,18 @@ public class RefrigeratorService
         if (fridgeTemp.HasValue)
         {
             if (fridgeTemp < 32 || fridgeTemp > 45)
-                throw new ArgumentException("Fridge temperature must be between 32-45°F");
+                throw new ArgumentException("Fridge temperature must be between 32-45F");
             _temperatureSettings.FridgeTemp = fridgeTemp.Value;
         }
         
         if (freezerTemp.HasValue)
         {
             if (freezerTemp < -10 || freezerTemp > 10)
-                throw new ArgumentException("Freezer temperature must be between -10 to 10°F");
+                throw new ArgumentException("Freezer temperature must be between -10 to 10F");
             _temperatureSettings.FreezerTemp = freezerTemp.Value;
         }
         
-        _logger.LogInformation($"Updated temperatures - Fridge: {_temperatureSettings.FridgeTemp}°F, Freezer: {_temperatureSettings.FreezerTemp}°F");
+        _logger.LogInformation($"Updated temperatures - Fridge: {_temperatureSettings.FridgeTemp}F, Freezer: {_temperatureSettings.FreezerTemp}F");
         return _temperatureSettings;
     }
 
@@ -56,7 +57,7 @@ public class RefrigeratorService
     {
         await SimulateDelay();
         
-        // Simulate some random variations
+        // simulate some random stuff happening
         _diagnostics.PowerUsageKwh = Math.Round(1.0 + _random.NextDouble() * 0.5, 2);
         _diagnostics.FilterDaysRemaining = Math.Max(0, _diagnostics.FilterDaysRemaining - 1);
         
@@ -81,9 +82,8 @@ public class RefrigeratorService
     {
         await SimulateDelay();
         
-        var recipes = new List<Recipe>
-        {
-            new()
+        var recipes = new List<Recipe>();
+        recipes.Add(new Recipe()
             {
                 Name = "Chicken Caesar Salad",
                 Ingredients = new() { "Chicken", "Lettuce", "Cheese", "Caesar Dressing" },
@@ -91,8 +91,8 @@ public class RefrigeratorService
                 PrepTimeMinutes = 15,
                 CookTimeMinutes = 20,
                 Servings = 4
-            },
-            new()
+            });
+        recipes.Add(new Recipe()
             {
                 Name = "Cheese Omelette",
                 Ingredients = new() { "Eggs", "Cheese", "Butter", "Salt", "Pepper" },
@@ -100,8 +100,7 @@ public class RefrigeratorService
                 PrepTimeMinutes = 5,
                 CookTimeMinutes = 5,
                 Servings = 2
-            }
-        };
+            });
         
         _logger.LogInformation($"Generated {recipes.Count} recipe suggestions");
         return recipes;
@@ -109,6 +108,7 @@ public class RefrigeratorService
 
     private async Task SimulateDelay()
     {
+        // add some delay to make it feel real
         var delay = _random.Next(100, 500);
         await Task.Delay(delay);
     }

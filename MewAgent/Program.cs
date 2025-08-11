@@ -17,7 +17,7 @@ class Program
         
         await agent.InitializeAsync();
         
-        Console.WriteLine("🐱 Mew Agent - Smart Refrigerator Assistant");
+        Console.WriteLine("Mew Agent - Smart Refrigerator Assistant");
         Console.WriteLine("=========================================");
         Console.WriteLine();
         
@@ -48,7 +48,7 @@ class Program
             Console.WriteLine(response);
         }
         
-        Console.WriteLine("\n👋 Goodbye! Thanks for using Mew Agent.");
+        Console.WriteLine("\nGoodbye! Thanks for using Mew Agent.");
     }
     
     static IHostBuilder CreateHostBuilder(string[] args) =>
@@ -60,7 +60,8 @@ class Program
             })
             .ConfigureServices((context, services) =>
             {
-                services.AddSingleton<SimpleMcpService>();
+                services.AddHttpClient<McpClientService>();
+                services.AddSingleton<McpClientService>();
                 services.AddSingleton<MewAgentService>();
                 
                 services.AddLogging(builder =>
@@ -73,14 +74,14 @@ class Program
     
     static void ShowHelp()
     {
-        Console.WriteLine("📚 Available Commands:");
+        Console.WriteLine("Available Commands:");
         Console.WriteLine("  /help     - Show this help message");
         Console.WriteLine("  /tools    - List available refrigerator tools");
         Console.WriteLine("  /memory   - Show conversation memory usage");
         Console.WriteLine("  /clear    - Clear conversation history");
         Console.WriteLine("  /quit     - Exit the application");
         Console.WriteLine();
-        Console.WriteLine("💡 Try asking me:");
+        Console.WriteLine("Try asking me:");
         Console.WriteLine("  - What's the current temperature?");
         Console.WriteLine("  - What food do I have?");
         Console.WriteLine("  - Suggest a recipe for dinner");
@@ -97,7 +98,7 @@ class Program
                 return true;
                 
             case "/tools":
-                Console.WriteLine("\n🔧 Available Tools:");
+                Console.WriteLine("\nAvailable Tools:");
                 Console.WriteLine("  • GetTemperature - Get current refrigerator and freezer temperature settings");
                 Console.WriteLine("  • SetTemperature - Set refrigerator and/or freezer temperature");
                 Console.WriteLine("  • GetDiagnostics - Get system health and maintenance information");
@@ -106,12 +107,12 @@ class Program
                 return true;
                 
             case "/memory":
-                Console.WriteLine($"\n🧠 Conversation Memory: {agent.GetHistoryCount()} messages");
+                Console.WriteLine($"\nConversation Memory: {agent.GetHistoryCount()} messages");
                 return true;
                 
             case "/clear":
                 agent.ClearHistory();
-                Console.WriteLine("✨ Conversation history cleared!");
+                Console.WriteLine("Conversation history cleared!");
                 return true;
                 
             case "/quit":
@@ -119,7 +120,7 @@ class Program
                 return false;
                 
             default:
-                Console.WriteLine($"❓ Unknown command: {command}");
+                Console.WriteLine($"Unknown command: {command}");
                 Console.WriteLine("   Type /help for available commands");
                 return true;
         }

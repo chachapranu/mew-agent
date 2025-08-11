@@ -12,17 +12,18 @@ public class MewAgentService
 {
     private readonly ILogger<MewAgentService> _logger;
     private readonly IConfiguration _configuration;
-    private readonly SimpleMcpService _mcpService;
+    private readonly McpClientService _mcpClientService;
     private readonly Kernel _kernel;
     private readonly IChatCompletionService _chatService;
     private readonly ChatHistory _chatHistory;
 
-    private const string SystemPrompt = @"You are Mew, a friendly and proactive AI assistant for a smart refrigerator. 
+    // system prompt for the AI - defines personality and capabilities  
+    private const string SystemPrompt = @"You are Mew, a friendly AI assistant for a smart refrigerator. 
 You help users manage their kitchen, food inventory, recipes, and cooking activities.
 
 Your personality:
 - Enthusiastic about cooking and food
-- Proactive in suggesting recipes and meal planning
+- Proactive in suggesting recipes and meal planning  
 - Helpful with kitchen organization
 - Knowledgeable about food safety and storage
 
@@ -37,11 +38,11 @@ When users want to cook, be encouraging and suggest complementary activities lik
 
     public MewAgentService(
         IConfiguration configuration,
-        SimpleMcpService mcpService,
+        McpClientService mcpClientService,
         ILogger<MewAgentService> logger)
     {
         _configuration = configuration;
-        _mcpService = mcpService;
+        _mcpClientService = mcpClientService;
         _logger = logger;
 
         var builder = Kernel.CreateBuilder();
@@ -52,22 +53,20 @@ When users want to cook, be encouraging and suggest complementary activities lik
         
         if (!string.IsNullOrEmpty(endpoint))
         {
-            var httpClient = new HttpClient
-            {
-                BaseAddress = new Uri(endpoint)
-            };
+            var httpClient = new HttpClient();
+            httpClient.BaseAddress = new Uri(endpoint);
             
             builder.AddOpenAIChatCompletion(
                 modelId: modelId,
                 apiKey: apiKey,
                 httpClient: httpClient);
             
-            _logger.LogInformation("Using custom LLM endpoint: {Endpoint} with model: {Model}", endpoint, modelId);
+            _logger.LogInformation($"Using custom LLM endpoint: {endpoint} with model: {modelId}");
         }
         else
         {
             builder.AddOpenAIChatCompletion(modelId, apiKey);
-            _logger.LogInformation("Using standard OpenAI with model: {Model}", modelId);
+            _logger.LogInformation($"Using standard OpenAI with model: {modelId}");
         }
         
         _kernel = builder.Build();
@@ -83,7 +82,7 @@ When users want to cook, be encouraging and suggest complementary activities lik
     {
         _logger.LogInformation("Loading MCP plugins...");
         
-        var plugin = await _mcpService.CreatePluginAsync();
+        var plugin = await _mcpClientService.CreatePluginAsync();
         if (plugin != null)
         {
             _kernel.Plugins.Add(plugin);

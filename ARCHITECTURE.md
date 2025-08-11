@@ -1,6 +1,6 @@
-# 🏗️ Mew Agent Architecture Documentation
+# Mew Agent Architecture Documentation
 
-## 📖 Table of Contents
+## Table of Contents
 - [Overview](#overview)
 - [System Architecture](#system-architecture)
 - [Component Breakdown](#component-breakdown)
@@ -9,9 +9,9 @@
 - [Technology Stack](#technology-stack)
 - [Code Organization](#code-organization)
 
-## 🎯 Overview
+## Overview
 
-Mew Agent is a smart home AI assistant built on Microsoft Semantic Kernel that demonstrates modern AI orchestration patterns. The system uses the Model Context Protocol (MCP) for tool integration and supports any OpenAI-compatible LLM endpoint.
+Mew Agent is a smart home AI assistant that demonstrates proper Model Context Protocol (MCP) integration with Microsoft Semantic Kernel. The system uses real MCP server communication and supports any OpenAI-compatible LLM endpoint.
 
 ### Core Concepts
 - **Semantic Kernel (SK)**: Microsoft's AI orchestration framework
@@ -19,7 +19,7 @@ Mew Agent is a smart home AI assistant built on Microsoft Semantic Kernel that d
 - **Plugin Architecture**: Modular tool system for extensibility
 - **OpenAI Compatibility**: Works with any LLM that follows OpenAI's API format
 
-## 🏛️ System Architecture
+## System Architecture
 
 ```mermaid
 graph TB
@@ -53,7 +53,7 @@ graph TB
     Tools -.->|Exposed via| HP
 ```
 
-## 🧩 Component Breakdown
+## Component Breakdown
 
 ### 1. **MewAgentService** (`Services/MewAgentService.cs`)
 The brain of the application that orchestrates all interactions.
@@ -70,42 +70,43 @@ The brain of the application that orchestrates all interactions.
 - System prompt management for agent personality
 - Error handling and logging
 
-### 2. **HybridMcpService** (`Services/HybridMcpService.cs`)
+### 2. **McpClientService** (`Services/McpClientService.cs`)
 Manages MCP protocol connections and plugin creation.
 
 **Responsibilities:**
-- Attempts MCP connection via SSE (Server-Sent Events)
-- Falls back to HTTP if MCP unavailable
-- Dynamically creates Kernel plugins from discovered tools
-- Manages connection lifecycle
+- Discovers available tools from MCP server via HTTP
+- Creates Kernel plugins from discovered MCP tools
+- Executes tool calls via MCP server API
+- Handles serialization and error management
 
 **Protocol Support:**
-- SSE Transport for real-time MCP communication
-- HTTP fallback for compatibility
-- Tool discovery and metadata management
+- HTTP transport for MCP communication
+- Dynamic tool discovery at runtime
+- JSON serialization for complex results
 
-### 3. **RefrigeratorPlugin** (`Plugins/RefrigeratorPlugin.cs`)
-Exposes refrigerator controls as Semantic Kernel functions.
+### 3. **MCP Server** (`McpServerRefrigerator/`)
+Provides refrigerator functionality as MCP-compliant tools.
 
-**Available Tools:**
-```csharp
-[KernelFunction("GetTemperature")]      // Check fridge/freezer temps
-[KernelFunction("SetTemperature")]      // Adjust temperature settings
-[KernelFunction("GetDiagnostics")]      // System health monitoring
-[KernelFunction("GetInventory")]        // Food inventory tracking
-[KernelFunction("GetRecipeSuggestions")] // AI-powered recipe ideas
-```
+**Available Tools via MCP:**
+- `GetTemperature` - Check fridge/freezer temperatures
+- `SetTemperature` - Adjust temperature settings  
+- `GetDiagnostics` - System health monitoring
+- `GetInventory` - Food inventory tracking
+- `GetRecipeSuggestions` - AI-powered recipe suggestions
 
-### 4. **MCP Server** (`McpServerRefrigerator/`)
-Mock smart refrigerator API server.
+Tools are exposed via HTTP endpoints and discovered dynamically.
+
+### 4. **RefrigeratorService** (`Services/RefrigeratorService.cs`)
+Business logic layer for smart refrigerator operations.
 
 **Features:**
-- RESTful API endpoints for tool execution
-- Swagger documentation for testing
-- Mock data with realistic delays
-- 10% failure simulation for resilience testing
+- Temperature management with validation
+- System diagnostics and health monitoring
+- Food inventory tracking with expiration dates
+- Recipe suggestions based on available ingredients
+- Realistic delays and 10% failure simulation for testing
 
-## 🔄 Data Flow
+## Data Flow
 
 ### User Interaction Flow
 ```
@@ -141,10 +142,10 @@ sequenceDiagram
     SK->>LLM: Generate Response
     LLM-->>SK: Natural Language
     SK-->>Agent: Response
-    Agent-->>User: "The fridge is at 37°F..."
+    Agent-->>User: "The fridge is at 37 F..."
 ```
 
-## 🎨 Key Design Patterns
+## Key Design Patterns
 
 ### 1. **Dependency Injection**
 All services are registered via Microsoft.Extensions.DependencyInjection for testability and modularity.
@@ -175,7 +176,7 @@ All I/O operations are async for optimal performance:
 - MCP tool execution
 - Network communication
 
-## 💻 Technology Stack
+## Technology Stack
 
 ### Core Technologies
 | Component | Technology | Version | Purpose |
@@ -193,7 +194,7 @@ All I/O operations are async for optimal performance:
 - **Local LLMs**: Ollama, LocalAI, LM Studio
 - **Custom**: Any OpenAI-compatible endpoint
 
-## 📁 Code Organization
+## Code Organization
 
 ```
 /mew-agent/
@@ -220,7 +221,7 @@ All I/O operations are async for optimal performance:
     └── RefrigeratorModels.cs    # Domain models
 ```
 
-## 🔧 Configuration
+## Configuration
 
 ### appsettings.json Structure
 ```json
@@ -243,7 +244,7 @@ All I/O operations are async for optimal performance:
 }
 ```
 
-## 🚀 Extension Points
+## Extension Points
 
 ### Adding New Tools
 1. Add method to `RefrigeratorPlugin.cs` with `[KernelFunction]` attribute
@@ -263,7 +264,7 @@ Just update `appsettings.json`:
 3. Register plugin in `MewAgentService.InitializeAsync()`
 4. Create corresponding MCP server if needed
 
-## 📊 Performance Considerations
+## Performance Considerations
 
 - **Memory Management**: ChatHistory is kept in memory (consider persistence for production)
 - **Token Limits**: Configurable MaxTokens prevents excessive API costs
@@ -271,14 +272,14 @@ Just update `appsettings.json`:
 - **Async Operations**: Non-blocking I/O for better scalability
 - **Error Resilience**: Graceful fallbacks and error handling
 
-## 🔐 Security Notes
+## Security Notes
 
 - **API Keys**: Store in environment variables or secure vaults (not in source)
 - **Input Validation**: SK handles prompt injection protection
 - **Network Security**: HTTPS recommended for production
 - **Tool Authorization**: Consider adding auth to MCP server
 
-## 🎓 Learning Resources
+## Learning Resources
 
 - [Semantic Kernel Docs](https://learn.microsoft.com/semantic-kernel/)
 - [MCP Protocol Spec](https://modelcontextprotocol.io/)
