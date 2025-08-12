@@ -23,4 +23,5 @@ obj/
 Thumbs.db
 
 # Environment (uncomment to protect API keys)
-# appsettings.json
+MewAgent/appsettings.json
+McpServerRefrigerator/appsettings.json
