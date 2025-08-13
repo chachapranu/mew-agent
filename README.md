@@ -53,6 +53,9 @@ dotnet run
 | `Program.cs` | Entry point, dependency injection setup |
 | `Services/MewAgentService.cs` | Main orchestration, SK management |
 | `Services/McpClientService.cs` | MCP client that calls real MCP server tools |
+| `Services/TimerService.cs` | Internal timer system for proactive behavior |
+| `Plugins/TimerPlugin.cs` | Semantic Kernel plugin for timer functionality |
+| `Models/TimerModels.cs` | Timer data models and action types |
 | `appsettings.json` | Configuration for LLM and agent behavior |
 
 ## Design Principles
@@ -83,6 +86,14 @@ The agent discovers and calls these refrigerator tools from MCP server:
 
 All tools are provided by the MCP server running on port 5100.
 
+### 5. **Proactive Timer System**
+The agent includes an intelligent timer system for proactive behavior:
+- **Smart Task Execution** - Stores original user requests and replays them to LLM when timers expire
+- **Delayed Responses** - "Give me a recipe in 2 minutes" automatically provides recipes later
+- **Entertainment Mode** - "Entertain me for 2 hours" provides periodic jokes, facts, and games
+- **Cooking Guidance** - Step-by-step cooking timers with automatic prompts
+- **Flexible Reminders** - Any task can be scheduled with intelligent LLM execution
+
 ## Usage Examples
 
 ### Basic Interactions
@@ -97,9 +108,25 @@ You: Suggest a recipe for dinner
 Mew: Based on your available ingredients, here are some ideas...
 ```
 
+### Timer & Proactive Features
+```
+You: Give me a coffee recipe in 5 minutes
+Mew: I'll provide a coffee recipe in 5 minutes at 14:25:30. Timer ID: a1b2c3d4
+
+[5 minutes later]
+Timer Alert: Here's a delicious coffee recipe for you: French Press Coffee...
+
+You: Remind me to check the oven in 10 minutes
+Mew: Reminder set for 10 minutes: 'check the oven' at 14:30:15. ID: e5f6g7h8
+
+You: Entertain me for the next hour  
+Mew: Entertainment mode activated for 1 hour! I've set 4 proactive interactions...
+```
+
 ### Debug Commands
 - `/help` - Show available commands
 - `/tools` - List all available tools
+- `/timers` - List active timers with details
 - `/memory` - Show conversation history count
 - `/clear` - Reset conversation context
 - `/quit` - Exit the application
@@ -185,6 +212,8 @@ This project showcases:
 - **Modern AI Orchestration** with Semantic Kernel
 - **Custom LLM Integration** beyond just OpenAI
 - **Plugin Architecture** for extensible tool systems
+- **Proactive AI Behavior** with intelligent timer system
+- **Model Context Protocol** for dynamic tool discovery
 - **Clean Code Practices** with minimal, focused classes
 - **Async/Await Patterns** throughout the application
 - **Dependency Injection** for testable, modular design

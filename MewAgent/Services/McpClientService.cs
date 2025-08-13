@@ -8,16 +8,16 @@ namespace MewAgent.Services;
 
 // MCP client service that uses proper MCP pattern but connects to HTTP server
 // This bridges our existing HTTP server to the MCP client approach
-public class ProperMcpClientService
+public class McpClientService
 {
-    private readonly ILogger<ProperMcpClientService> _logger;
+    private readonly ILogger<McpClientService> _logger;
     private readonly IConfiguration _configuration;
     private readonly HttpClient _httpClient;
     private readonly string _mcpServerUrl;
 
-    public ProperMcpClientService(
+    public McpClientService(
         IConfiguration configuration,
-        ILogger<ProperMcpClientService> logger)
+        ILogger<McpClientService> logger)
     {
         _configuration = configuration;
         _logger = logger;

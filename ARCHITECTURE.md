@@ -28,6 +28,8 @@ graph TB
         MA[MewAgentService]
         SK[Semantic Kernel]
         MCP[MCP Client Service]
+        TS[Timer Service]
+        TP[Timer Plugin]
         HP[Hybrid Plugin System]
     end
     
@@ -45,7 +47,10 @@ graph TB
     MA -->|Orchestrates| SK
     SK -->|Chat Completion| LLM
     SK -->|Tool Calls| HP
+    SK -->|Timer Functions| TP
     HP -->|MCP Protocol| MCP
+    TP -->|Timer Management| TS
+    TS -->|Background Processing| TS
     MCP -->|HTTP/SSE| MCPS
     
     Models -.->|Used by| MA
@@ -84,7 +89,34 @@ Manages MCP protocol connections and plugin creation.
 - Dynamic tool discovery at runtime
 - JSON serialization for complex results
 
-### 3. **MCP Server** (`McpServerRefrigerator/`)
+### 3. **TimerService** (`Services/TimerService.cs`)
+Provides proactive behavior through an intelligent timer system.
+
+**Responsibilities:**
+- Manages internal timer lifecycle (create, execute, cancel)
+- Background timer processing with 5-second intervals
+- Smart task execution by replaying user context to LLM
+- Integration with console UI for timer notifications
+
+**Key Features:**
+- **Smart Task Execution**: Stores original user requests and replays to LLM
+- **Background Processing**: Automatic timer checking every 5 seconds
+- **Multiple Action Types**: Messages, LLM calls, tool execution, smart tasks
+- **Timer Chaining**: Support for follow-up timers and recurring reminders
+
+### 4. **TimerPlugin** (`Plugins/TimerPlugin.cs`)
+Semantic Kernel plugin exposing timer functionality to the LLM.
+
+**Available Functions:**
+- `SetTimer` - Generic timer with action types
+- `SetDelayedResponse` - Delayed LLM responses ("recipe in 2 minutes")
+- `SetReminder` - Simple and recurring reminders
+- `SetEntertainmentMode` - Proactive entertainment over time periods
+- `CancelTimer` - Cancel active timers by name/ID
+- `ListActiveTimers` - View all active timers
+- `SetCookingGuide` - Step-by-step cooking timers
+
+### 5. **MCP Server** (`McpServerRefrigerator/`)
 Provides refrigerator functionality as MCP-compliant tools.
 
 **Available Tools via MCP:**
@@ -96,7 +128,7 @@ Provides refrigerator functionality as MCP-compliant tools.
 
 Tools are exposed via HTTP endpoints and discovered dynamically.
 
-### 4. **RefrigeratorService** (`Services/RefrigeratorService.cs`)
+### 6. **RefrigeratorService** (`Services/RefrigeratorService.cs`)
 Business logic layer for smart refrigerator operations.
 
 **Features:**
@@ -152,8 +184,8 @@ All services are registered via Microsoft.Extensions.DependencyInjection for tes
 
 ```csharp
 services.AddSingleton<MewAgentService>();
-services.AddSingleton<HybridMcpService>();
-services.AddHttpClient<McpClientService>();
+services.AddSingleton<McpClientService>();
+services.AddSingleton<ITimerService, TimerService>();
 ```
 
 ### 2. **Plugin Architecture**
@@ -202,10 +234,13 @@ All I/O operations are async for optimal performance:
 │   ├── Program.cs                 # Entry point & DI setup
 │   ├── Services/
 │   │   ├── MewAgentService.cs    # Main orchestration
-│   │   ├── HybridMcpService.cs   # MCP connection management
-│   │   └── McpClientService.cs   # HTTP fallback client
+│   │   ├── McpClientService.cs   # MCP connection management
+│   │   ├── TimerService.cs       # Proactive timer system
+│   │   └── ITimerService.cs      # Timer service interface
 │   ├── Plugins/
-│   │   └── RefrigeratorPlugin.cs # Tool implementations
+│   │   └── TimerPlugin.cs        # Timer functionality plugin
+│   ├── Models/
+│   │   └── TimerModels.cs        # Timer data models
 │   └── appsettings.json          # Configuration
 │
 ├── McpServerRefrigerator/        # Mock MCP Server
@@ -247,10 +282,11 @@ All I/O operations are async for optimal performance:
 ## Extension Points
 
 ### Adding New Tools
-1. Add method to `RefrigeratorPlugin.cs` with `[KernelFunction]` attribute
-2. Implement tool logic in `RefrigeratorService.cs`
-3. Add tool definition to MCP discovery endpoint
-4. Tool automatically available to agent
+1. Add method to appropriate plugin with `[KernelFunction]` attribute
+2. For MCP tools: Implement in `RefrigeratorService.cs` and add to MCP discovery
+3. For internal tools: Add to `TimerService.cs` or create new plugin
+4. Register plugin in `MewAgentService.InitializeAsync()`
+5. Tool automatically available to agent
 
 ### Supporting New LLMs
 Just update `appsettings.json`:
