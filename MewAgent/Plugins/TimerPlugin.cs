@@ -365,19 +365,10 @@ public class TimerPlugin
                 
             case "tool_call":
             case "tool":
-                action.Type = TimerActionType.ExecuteTool;
-                action.ToolName = actionContent;
-                if (!string.IsNullOrEmpty(toolParameters))
-                {
-                    try
-                    {
-                        action.ToolParameters = JsonSerializer.Deserialize<Dictionary<string, object>>(toolParameters);
-                    }
-                    catch
-                    {
-                        action.ToolParameters = new Dictionary<string, object>();
-                    }
-                }
+                // Instead of direct tool execution, use SmartTask to let LLM handle tool calling and formatting
+                action.Type = TimerActionType.SmartTask;
+                action.OriginalUserRequest = ConvertToolNameToNaturalRequest(actionContent);
+                action.RequestedAt = DateTime.Now;
                 break;
                 
             default:
@@ -405,6 +396,36 @@ public class TimerPlugin
                !lowerContent.Contains("what");
     }
 
+
+    private string ConvertToolNameToNaturalRequest(string toolName)
+    {
+        // convert tool names to natural language requests that the LLM can understand
+        var normalized = toolName.ToLowerInvariant().Trim();
+        
+        return normalized switch
+        {
+            "get temperature" => "What is the current refrigerator temperature?",
+            "check temperature" => "Check the refrigerator temperature",
+            "temperature" => "Tell me the refrigerator temperature",
+            "gettemperature" => "What is the current refrigerator temperature?",
+            "get inventory" => "What food items are in the refrigerator?",
+            "check inventory" => "Check the refrigerator inventory",
+            "inventory" => "Show me what's in the refrigerator",
+            "getinventory" => "What food items are in the refrigerator?",
+            "get diagnostics" => "Check the refrigerator system diagnostics",
+            "check diagnostics" => "Run refrigerator diagnostics",
+            "diagnostics" => "Show refrigerator system status",
+            "getdiagnostics" => "Check the refrigerator system diagnostics",
+            "get recipes" => "Suggest recipes based on available ingredients",
+            "get recipe suggestions" => "What recipes can I make with available ingredients?",
+            "recipes" => "Give me recipe suggestions",
+            "getrecipesuggestions" => "Suggest recipes based on available ingredients",
+            "set temperature" => "Set the refrigerator temperature",
+            "settemperature" => "Set the refrigerator temperature",
+            _ => toolName // return original if no mapping found - assume it's already a natural request
+        };
+    }
+
     private string GetActionDescription(TimerAction action)
     {
         return action.Type switch
@@ -412,7 +433,7 @@ public class TimerPlugin
             TimerActionType.InvokeLLM => $"call LLM with: '{action.LLMPrompt}'",
             TimerActionType.ShowMessage => $"show message: '{action.Message}'",
             TimerActionType.ExecuteTool => $"execute tool: '{action.ToolName}'",
-            TimerActionType.SmartTask => $"execute task: '{action.OriginalUserRequest}'",
+            TimerActionType.SmartTask => $"handle request: '{action.OriginalUserRequest}'",
             TimerActionType.PlaySound => "play sound notification",
             _ => "perform custom action"
         };

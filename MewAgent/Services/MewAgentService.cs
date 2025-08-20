@@ -34,35 +34,23 @@ public class MewAgentService
     }
     private Action<string>? _messageDisplayer;
 
-    // system prompt for the AI - defines personality and capabilities  
-    private const string SystemPrompt = @"You are Mew, a proactive AI assistant for a smart refrigerator. 
-You help users manage their kitchen, food inventory, recipes, and cooking activities.
+    // system prompt for the AI - simple and direct
+    private const string SystemPrompt = @"You are Mew, an AI assistant for a smart refrigerator system.
 
-Your personality:
-- Enthusiastic about cooking and food
-- Proactive in suggesting recipes and meal planning  
-- Helpful with kitchen organization
-- Knowledgeable about food safety and storage
-- Proactive with timers and reminders
+You have access to refrigerator tools via MCP (Model Context Protocol) and timer tools.
 
-You have access to:
+When users ask about refrigerator data:
+1. Use the appropriate MCP tool to get the information
+2. Present the results in natural, conversational language
+3. Don't show raw JSON data - interpret and explain it clearly
 
-Refrigerator tools:
-- Check and adjust temperatures
-- Monitor system health
-- View food inventory
-- Suggest recipes based on available ingredients
+For example:
+- Temperature queries: 'The refrigerator is set to 37°F (freezer at 0°F, Normal mode)'
+- Inventory queries: 'You have 2 eggs, 1 gallon of milk, and 3 apples'
 
-Timer tools:
-- Set timers for delayed responses (SetDelayedResponse)
-- Set reminders (SetReminder)
-- Activate entertainment mode for long durations (SetEntertainmentMode)
-- Set cooking guidance timers (SetCookingGuide)
-- Cancel and list active timers
+When users request delayed actions, use timer tools appropriately.
+Be direct, helpful, and conversational.";
 
-Use timers proactively! When users ask for something later, set a delayed response timer. When they want entertainment over time, use entertainment mode. For cooking, set step-by-step timers.
-
-Always explain what you're doing when using tools, and provide helpful context about why certain actions are recommended.";
 
     public MewAgentService(
         IConfiguration configuration,
@@ -123,6 +111,13 @@ Always explain what you're doing when using tools, and provide helpful context a
             _kernel.Plugins.Add(mcpPlugin);
             _logger.LogInformation("Added {PluginName} plugin with {FunctionCount} functions", 
                 mcpPlugin.Name, mcpPlugin.Count());
+                
+            // Log each available function
+            foreach (var function in mcpPlugin)
+            {
+                _logger.LogInformation("  - Function: {FunctionName} - {Description}", 
+                    function.Name, function.Description);
+            }
         }
         else
         {
@@ -158,11 +153,12 @@ Always explain what you're doing when using tools, and provide helpful context a
                 executionSettings,
                 _kernel);
             
-            _chatHistory.AddAssistantMessage(response.Content ?? string.Empty);
+            var cleanContent = CleanLLMResponse(response.Content ?? string.Empty);
+            _chatHistory.AddAssistantMessage(cleanContent);
             
-            _logger.LogInformation("Generated response with {Length} characters", response.Content?.Length ?? 0);
+            _logger.LogInformation("Generated response with {Length} characters", cleanContent.Length);
             
-            return response.Content ?? "I'm sorry, I couldn't generate a response.";
+            return cleanContent.Length > 0 ? cleanContent : "I'm sorry, I couldn't generate a response.";
         }
         catch (Exception ex)
         {
@@ -195,16 +191,7 @@ Always explain what you're doing when using tools, and provide helpful context a
                 {
                     // create a temporary chat history for timer-triggered LLM calls
                     var tempHistory = new ChatHistory();
-                    tempHistory.AddSystemMessage(@"You are Mew, responding to a timer-triggered request. Be helpful and direct.
-                    
-You have access to these tools:
-- GetTemperature: Check refrigerator and freezer temperatures
-- SetTemperature: Adjust temperature settings  
-- GetDiagnostics: View system health and maintenance info
-- GetInventory: Check food inventory
-- GetRecipeSuggestions: Get recipe ideas based on ingredients
-
-When responding to timer requests, use the appropriate tools if needed. For example, if asked about temperature, call GetTemperature. If asked about food, call GetInventory.");
+                    tempHistory.AddSystemMessage(SystemPrompt); // reuse the same system prompt
                     tempHistory.AddUserMessage(prompt);
                     
                     var executionSettings = new OpenAIPromptExecutionSettings
@@ -219,7 +206,7 @@ When responding to timer requests, use the appropriate tools if needed. For exam
                         executionSettings,
                         _kernel);
                     
-                    return response.Content ?? "Timer response generated successfully.";
+                    return CleanLLMResponse(response.Content ?? "Timer response generated successfully.");
                 }
                 catch (Exception ex)
                 {
@@ -330,5 +317,48 @@ When responding to timer requests, use the appropriate tools if needed. For exam
     public async Task<bool> CancelTimerAsync(string timerId)
     {
         return await _timerService.CancelTimerAsync(timerId);
+    }
+
+    // clean LLM response from reasoning tokens (for models that include them)
+    private string CleanLLMResponse(string response)
+    {
+        if (string.IsNullOrEmpty(response))
+            return response;
+
+        // check if response contains reasoning tokens
+        if (!response.Contains("<|channel|>") && !response.Contains("<|message|>"))
+            return response; // no cleaning needed
+
+        try
+        {
+            // extract final message from reasoning tokens
+            // pattern: <|channel|>final<|message|>actual_message
+            var finalPattern = @"<\|channel\|>final<\|message\|>(.*?)(?:<\|end\||$)";
+            var match = System.Text.RegularExpressions.Regex.Match(response, finalPattern, System.Text.RegularExpressions.RegexOptions.Singleline);
+            
+            if (match.Success)
+            {
+                return match.Groups[1].Value.Trim();
+            }
+
+            // fallback: try to extract any message after the last <|message|> tag
+            var lastMessagePattern = @"<\|message\|>([^<]*?)(?:<|$)";
+            var matches = System.Text.RegularExpressions.Regex.Matches(response, lastMessagePattern, System.Text.RegularExpressions.RegexOptions.Singleline);
+            
+            if (matches.Count > 0)
+            {
+                // get the last message
+                var lastMatch = matches[matches.Count - 1];
+                return lastMatch.Groups[1].Value.Trim();
+            }
+
+            // if no patterns match, return original response
+            return response;
+        }
+        catch
+        {
+            // if regex parsing fails, return original response
+            return response;
+        }
     }
 }

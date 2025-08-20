@@ -1,15 +1,14 @@
-using Shared;
+using McpServerRefrigerator.Models;
 
 namespace McpServerRefrigerator.Services;
 
 public class RefrigeratorService
 {
     private readonly ILogger<RefrigeratorService> _logger;
-    private readonly Random _random = new Random();
     
     private TemperatureSettings _temperatureSettings = new();
     private SystemDiagnostics _diagnostics = new();
-    // Default fridge inventory - probably should load from database later
+    // mock inventory - simple data for testing MCP
     private readonly List<InventoryItem> _inventory = new List<InventoryItem>()
     {
         new InventoryItem() { Name = "Milk", Quantity = 1, Unit = "gallon", ExpirationDate = DateTime.Now.AddDays(7) },
@@ -26,14 +25,12 @@ public class RefrigeratorService
 
     public async Task<TemperatureSettings> GetTemperatureAsync()
     {
-        await SimulateDelay();
         _logger.LogInformation("Getting temperature settings");
-        return _temperatureSettings;
+        return await Task.FromResult(_temperatureSettings);
     }
 
     public async Task<TemperatureSettings> SetTemperatureAsync(double? fridgeTemp, double? freezerTemp)
     {
-        await SimulateDelay();
         
         if (fridgeTemp.HasValue)
         {
@@ -55,32 +52,19 @@ public class RefrigeratorService
 
     public async Task<SystemDiagnostics> GetDiagnosticsAsync()
     {
-        await SimulateDelay();
-        
-        // simulate some random stuff happening
-        _diagnostics.PowerUsageKwh = Math.Round(1.0 + _random.NextDouble() * 0.5, 2);
-        _diagnostics.FilterDaysRemaining = Math.Max(0, _diagnostics.FilterDaysRemaining - 1);
-        
-        if (_diagnostics.FilterDaysRemaining < 30)
-        {
-            if (!_diagnostics.ActiveAlerts.Contains("Filter replacement needed soon"))
-                _diagnostics.ActiveAlerts.Add("Filter replacement needed soon");
-        }
-        
+        _diagnostics.PowerUsageKwh = 1.2; // static mock value
         _logger.LogInformation("Retrieved system diagnostics");
-        return _diagnostics;
+        return await Task.FromResult(_diagnostics);
     }
 
     public async Task<List<InventoryItem>> GetInventoryAsync()
     {
-        await SimulateDelay();
         _logger.LogInformation($"Retrieved {_inventory.Count} inventory items");
-        return _inventory;
+        return await Task.FromResult(_inventory);
     }
 
     public async Task<List<Recipe>> GetRecipeSuggestionsAsync()
     {
-        await SimulateDelay();
         
         var recipes = new List<Recipe>();
         recipes.Add(new Recipe()
@@ -106,10 +90,4 @@ public class RefrigeratorService
         return recipes;
     }
 
-    private async Task SimulateDelay()
-    {
-        // add some delay to make it feel real
-        var delay = _random.Next(100, 500);
-        await Task.Delay(delay);
-    }
 }

@@ -31,6 +31,10 @@ class Program
         }
         finally
         {
+            // Clean up MCP client
+            var mcpClient = serviceProvider.GetService<McpClientService>();
+            mcpClient?.Dispose();
+            
             serviceProvider.Dispose();
         }
     }
@@ -60,6 +64,9 @@ class Program
         services.AddSingleton<McpClientService>();
         services.AddSingleton<ITimerService, TimerService>();
         services.AddSingleton<MewAgentService>();
+        
+        // register HttpClient for potential HTTP transport
+        services.AddHttpClient();
         
         return services;
     }

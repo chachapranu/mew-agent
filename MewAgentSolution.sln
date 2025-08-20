@@ -5,8 +5,6 @@ VisualStudioVersion = 17.0.31903.59
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "McpServerRefrigerator", "McpServerRefrigerator\McpServerRefrigerator.csproj", "{21C8A059-D1D1-417A-A9A6-8F63078930FF}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Shared", "Shared\Shared.csproj", "{E5945E72-17C6-446F-8411-995FEB78A057}"
-EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MewAgent", "MewAgent\MewAgent.csproj", "{A30F6CC6-F323-479D-BF6E-019C8C9976EA}"
 EndProject
 Global
@@ -22,10 +20,6 @@ Global
 		{21C8A059-D1D1-417A-A9A6-8F63078930FF}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{21C8A059-D1D1-417A-A9A6-8F63078930FF}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{21C8A059-D1D1-417A-A9A6-8F63078930FF}.Release|Any CPU.Build.0 = Release|Any CPU
-		{E5945E72-17C6-446F-8411-995FEB78A057}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{E5945E72-17C6-446F-8411-995FEB78A057}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{E5945E72-17C6-446F-8411-995FEB78A057}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{E5945E72-17C6-446F-8411-995FEB78A057}.Release|Any CPU.Build.0 = Release|Any CPU
 		{A30F6CC6-F323-479D-BF6E-019C8C9976EA}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{A30F6CC6-F323-479D-BF6E-019C8C9976EA}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{A30F6CC6-F323-479D-BF6E-019C8C9976EA}.Release|Any CPU.ActiveCfg = Release|Any CPU

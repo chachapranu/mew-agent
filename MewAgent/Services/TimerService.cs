@@ -195,7 +195,7 @@ public class TimerService : ITimerService, IDisposable
         return timerIds;
     }
 
-    public async Task<List<string>> SetCookingTimersAsync(string recipeName, List<(string step, TimeSpan duration)> steps)
+    public Task<List<string>> SetCookingTimersAsync(string recipeName, List<(string step, TimeSpan duration)> steps)
     {
         var timerIds = new List<string>();
         var currentTime = DateTime.UtcNow;
@@ -223,7 +223,7 @@ public class TimerService : ITimerService, IDisposable
         }
 
         _logger.LogInformation("Set {Count} cooking timers for recipe '{Recipe}'", steps.Count, recipeName);
-        return timerIds;
+        return Task.FromResult(timerIds);
     }
 
     // background processing

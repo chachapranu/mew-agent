@@ -54,8 +54,9 @@ var logger = app.Services.GetRequiredService<ILogger<Program>>();
 logger.LogInformation("MCP Server - Smart Refrigerator started");
 logger.LogInformation($"Server running on: {builder.Configuration["Urls"] ?? "http://localhost:5000"}");
 logger.LogInformation("Available endpoints:");
-logger.LogInformation("  GET  /api/mcp/tools   - Discover available tools");
-logger.LogInformation("  POST /api/mcp/execute - Execute a tool");
-logger.LogInformation("  GET  /api/mcp/health  - Health check");
+logger.LogInformation("  GET  /api/mcp/tools   - Discover available tools (legacy)");
+logger.LogInformation("  POST /api/mcp/execute - Execute a tool (legacy)");
+logger.LogInformation("  POST /sse            - MCP Server-Sent Events endpoint");
+logger.LogInformation("  GET  /api/mcp/health - Health check");
 
 app.Run();

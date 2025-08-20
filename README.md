@@ -27,6 +27,8 @@ cd MewAgent
 dotnet run
 ```
 
+The agent uses the official MCP C# SDK with HTTP transport to connect to your MCP server at `http://localhost:5100`.
+
 ## Architecture Overview
 
 ### Core Components
@@ -88,11 +90,13 @@ All tools are provided by the MCP server running on port 5100.
 
 ### 5. **Proactive Timer System**
 The agent includes an intelligent timer system for proactive behavior:
-- **Smart Task Execution** - Stores original user requests and replays them to LLM when timers expire
+- **Smart Task Execution** - Stores original user requests and replays them to LLM when timers expire for natural language responses
+- **Tool Call Integration** - Timer actions automatically trigger MCP tool calls through the LLM for properly formatted results
 - **Delayed Responses** - "Give me a recipe in 2 minutes" automatically provides recipes later
 - **Entertainment Mode** - "Entertain me for 2 hours" provides periodic jokes, facts, and games
 - **Cooking Guidance** - Step-by-step cooking timers with automatic prompts
 - **Flexible Reminders** - Any task can be scheduled with intelligent LLM execution
+- **Response Filtering** - Automatically cleans reasoning tokens from LLM responses for clean output
 
 ## Usage Examples
 
@@ -115,6 +119,12 @@ Mew: I'll provide a coffee recipe in 5 minutes at 14:25:30. Timer ID: a1b2c3d4
 
 [5 minutes later]
 Timer Alert: Here's a delicious coffee recipe for you: French Press Coffee...
+
+You: Check refrigerator temp in 1 min
+Mew: Got it! I'll check the fridge temperature for you in exactly one minute.
+
+[1 minute later]  
+Timer Alert: Your fridge is set to 37°F (the freezer is at 0°F) and it's in Normal mode.
 
 You: Remind me to check the oven in 10 minutes
 Mew: Reminder set for 10 minutes: 'check the oven' at 14:30:15. ID: e5f6g7h8

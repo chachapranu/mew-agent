@@ -8,7 +8,6 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="mcpdotnet" Version="1.2.0.1" />
     <PackageReference Include="Microsoft.Extensions.Configuration.EnvironmentVariables" Version="8.0.0" />
     <PackageReference Include="Microsoft.Extensions.Configuration.Json" Version="8.0.0" />
     <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="8.0.1" />
@@ -18,11 +17,7 @@
     <PackageReference Include="Microsoft.SemanticKernel" Version="*" />
     <PackageReference Include="Microsoft.SemanticKernel.Connectors.OpenAI" Version="*" />
     <PackageReference Include="ModelContextProtocol" Version="0.3.0-preview.3" />
-    <PackageReference Include="ModelContextProtocol.Core" Version="0.3.0-preview.3" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <ProjectReference Include="..\Shared\Shared.csproj" />
+    <PackageReference Include="ModelContextProtocol.AspNetCore" Version="0.3.0-preview.3" />
   </ItemGroup>
 
 </Project>

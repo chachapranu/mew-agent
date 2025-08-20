@@ -1,5 +1,6 @@
-namespace Shared;
+namespace McpServerRefrigerator.Models;
 
+// MCP protocol models - server side
 public class ToolRequest
 {
     public string ToolName { get; set; } = string.Empty;

@@ -1,5 +1,5 @@
 using Microsoft.AspNetCore.Mvc;
-using Shared;
+using McpServerRefrigerator.Models;
 using McpServerRefrigerator.Services;
 
 namespace McpServerRefrigerator.Controllers;

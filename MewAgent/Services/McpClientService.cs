@@ -1,19 +1,19 @@
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using Microsoft.SemanticKernel;
+using ModelContextProtocol.Client;
+using ModelContextProtocol.Protocol;
 using System.Text.Json;
-using Shared;
 
 namespace MewAgent.Services;
 
-// MCP client service that uses proper MCP pattern but connects to HTTP server
-// This bridges our existing HTTP server to the MCP client approach
-public class McpClientService
+// MCP client service using official MCP C# SDK
+public class McpClientService : IDisposable
 {
     private readonly ILogger<McpClientService> _logger;
     private readonly IConfiguration _configuration;
-    private readonly HttpClient _httpClient;
-    private readonly string _mcpServerUrl;
+    private IMcpClient? _mcpClient;
+    private IClientTransport? _transport;
 
     public McpClientService(
         IConfiguration configuration,
@@ -21,39 +21,55 @@ public class McpClientService
     {
         _configuration = configuration;
         _logger = logger;
-        _httpClient = new HttpClient();
-        _mcpServerUrl = configuration["McpServer:BaseUrl"] ?? "http://localhost:5100";
     }
 
     public async Task<KernelPlugin> CreatePluginAsync()
     {
-        _logger.LogInformation("Discovering MCP tools from server: {Url}", _mcpServerUrl);
+        _logger.LogInformation("Connecting to MCP server using official SDK");
         
         try
         {
-            // discover available tools from MCP server
-            var tools = await ListToolsAsync();
+            // Create HTTP transport to connect to HTTP-based MCP server
+            var serverUrl = _configuration["McpServer:HttpUrl"] ?? "http://localhost:5100";
+            var sseEndpoint = $"{serverUrl}/sse";
+            
+            _transport = new SseClientTransport(new SseClientTransportOptions
+            {
+                Name = "MewAgentMcpClient",
+                Endpoint = new Uri(sseEndpoint),
+                TransportMode = HttpTransportMode.StreamableHttp
+            });
 
+            // Create MCP client using official factory
+            _mcpClient = await McpClientFactory.CreateAsync(_transport);
+            _logger.LogInformation("Successfully connected to MCP server at {Url}", serverUrl);
+
+            // Discover available tools using official SDK
+            _logger.LogInformation("Attempting to discover tools from MCP server...");
+            var tools = await _mcpClient.ListToolsAsync();
+            _logger.LogInformation("ListToolsAsync returned {Count} tools", tools?.Count() ?? 0);
+            
             if (tools == null || !tools.Any())
             {
-                throw new InvalidOperationException("No tools discovered from MCP server");
+                _logger.LogWarning("No tools discovered from MCP server");
+                return KernelPluginFactory.CreateFromFunctions("McpTools", "Empty MCP plugin", new List<KernelFunction>());
             }
 
-            _logger.LogInformation("Discovered {Count} tools from MCP server", tools.Count);
+            _logger.LogInformation("Discovered {Count} tools from MCP server", tools.Count());
 
-            // create kernel functions from discovered tools
+            // Create kernel functions from discovered tools
             var functions = new List<KernelFunction>();
             
             foreach (var tool in tools)
             {
                 var function = CreateKernelFunctionFromTool(tool);
                 functions.Add(function);
-                _logger.LogDebug("Created function: {Name} - {Description}", tool.Name, tool.Description);
+                _logger.LogInformation("Created function: {Name} - {Description}", tool.Name, tool.Description);
             }
 
             var plugin = KernelPluginFactory.CreateFromFunctions(
-                "McpRefrigerator",
-                "MCP-powered refrigerator control and monitoring",
+                "McpTools",
+                "MCP-powered tools via official SDK",
                 functions);
 
             _logger.LogInformation("Created MCP plugin with {Count} functions", functions.Count);
@@ -61,87 +77,48 @@ public class McpClientService
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to create MCP plugin from server: {Url}", _mcpServerUrl);
-            throw;
-        }
-    }
-
-    private async Task<List<ToolDefinition>> ListToolsAsync()
-    {
-        try
-        {
-            var toolsResponse = await _httpClient.GetAsync($"{_mcpServerUrl}/api/mcp/tools");
-            toolsResponse.EnsureSuccessStatusCode();
+            _logger.LogError(ex, "Failed to create MCP plugin: {ErrorMessage}", ex.Message);
+            _logger.LogError("Stack trace: {StackTrace}", ex.StackTrace);
             
-            var toolsJson = await toolsResponse.Content.ReadAsStringAsync();
-            var tools = JsonSerializer.Deserialize<List<ToolDefinition>>(toolsJson, new JsonSerializerOptions
-            {
-                PropertyNameCaseInsensitive = true
-            });
-
-            return tools ?? new List<ToolDefinition>();
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Failed to list tools from MCP server");
-            return new List<ToolDefinition>();
+            // Return empty plugin on failure so agent can still work with timers
+            return KernelPluginFactory.CreateFromFunctions("McpTools", "Failed MCP plugin", new List<KernelFunction>());
         }
     }
 
-    private KernelFunction CreateKernelFunctionFromTool(ToolDefinition tool)
+
+    private KernelFunction CreateKernelFunctionFromTool(dynamic tool)
     {
+        string toolName = tool.Name;
+        string toolDescription = tool.Description ?? "MCP Tool";
+        
         return KernelFunctionFactory.CreateFromMethod(
-            method: async (KernelArguments args) => await CallMcpToolAsync(tool.Name, args),
-            functionName: tool.Name,
-            description: tool.Description);
+            method: async (KernelArguments args) => await CallMcpToolAsync(toolName, args),
+            functionName: toolName,
+            description: toolDescription);
     }
 
     private async Task<string> CallMcpToolAsync(string toolName, KernelArguments args)
     {
         try
         {
-            _logger.LogDebug("Calling MCP tool: {ToolName}", toolName);
+            _logger.LogInformation("Calling MCP tool: {ToolName} with args: {@Args}", toolName, args);
 
-            // prepare tool request
-            var request = new ToolRequest
+            if (_mcpClient == null)
             {
-                ToolName = toolName,
-                Parameters = args.ToDictionary(kvp => kvp.Key, kvp => kvp.Value ?? new object())
-            };
-
-            var requestJson = JsonSerializer.Serialize(request);
-            var content = new StringContent(requestJson, System.Text.Encoding.UTF8, "application/json");
-
-            // call MCP server
-            var response = await _httpClient.PostAsync($"{_mcpServerUrl}/api/mcp/execute", content);
-            response.EnsureSuccessStatusCode();
-
-            var responseJson = await response.Content.ReadAsStringAsync();
-            var toolResponse = JsonSerializer.Deserialize<ToolResponse>(responseJson, new JsonSerializerOptions
-            {
-                PropertyNameCaseInsensitive = true
-            });
-
-            if (toolResponse == null)
-            {
-                throw new InvalidOperationException($"Invalid response from MCP server for tool: {toolName}");
+                _logger.LogError("MCP client is not initialized");
+                return $"MCP client not available for tool: {toolName}";
             }
 
-            if (!toolResponse.Success)
-            {
-                throw new InvalidOperationException($"MCP tool execution failed: {toolResponse.Error}");
-            }
+            // Convert KernelArguments to IReadOnlyDictionary for MCP client
+            var toolArgs = args.ToDictionary(kvp => kvp.Key, kvp => (object?)kvp.Value) as IReadOnlyDictionary<string, object?>;
 
-            _logger.LogDebug("MCP tool {ToolName} executed successfully in {ExecutionTime}ms", toolName, toolResponse.ExecutionTimeMs);
+            // Call tool using official MCP client
+            var result = await _mcpClient.CallToolAsync(toolName, toolArgs);
             
-            // serialize result to string for semantic kernel
-            if (toolResponse.Result == null)
-                return string.Empty;
+            _logger.LogInformation("MCP tool {ToolName} executed successfully", toolName);
             
-            if (toolResponse.Result is string strResult)
-                return strResult;
-                
-            return JsonSerializer.Serialize(toolResponse.Result, new JsonSerializerOptions
+            // Return result as JSON string
+            return JsonSerializer.Serialize(result, new JsonSerializerOptions
             {
                 PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
                 WriteIndented = true
@@ -156,6 +133,8 @@ public class McpClientService
 
     public void Dispose()
     {
-        _httpClient?.Dispose();
+        // Note: MCP client interfaces don't implement IDisposable in current version
+        // Cleanup will be handled by the underlying transport implementation
     }
 }
+

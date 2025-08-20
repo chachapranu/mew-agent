@@ -1,6 +1,6 @@
 using System.Diagnostics;
 using System.Text.Json;
-using Shared;
+using McpServerRefrigerator.Models;
 
 namespace McpServerRefrigerator.Services;
 
@@ -8,7 +8,6 @@ public class ToolExecutionService
 {
     private readonly RefrigeratorService _refrigeratorService;
     private readonly ILogger<ToolExecutionService> _logger;
-    private readonly Random _random = new();
 
     public ToolExecutionService(RefrigeratorService refrigeratorService, ILogger<ToolExecutionService> logger)
     {
@@ -65,15 +64,10 @@ public class ToolExecutionService
     public async Task<ToolResponse> ExecuteToolAsync(ToolRequest request)
     {
         var stopwatch = Stopwatch.StartNew();
+        _logger.LogInformation("[TOOL-EXEC] Starting {ToolName} with params: {@Parameters}", request.ToolName, request.Parameters);
         
         try
         {
-            // Simulate 10% failure rate for learning purposes
-            if (_random.Next(10) == 0)
-            {
-                throw new Exception("Simulated tool execution failure");
-            }
-
             object? result = request.ToolName switch
             {
                 "GetTemperature" => await _refrigeratorService.GetTemperatureAsync(),
@@ -85,7 +79,7 @@ public class ToolExecutionService
             };
 
             stopwatch.Stop();
-            _logger.LogInformation($"Tool '{request.ToolName}' executed successfully in {stopwatch.ElapsedMilliseconds}ms");
+            _logger.LogInformation("[TOOL-DONE] {ToolName} finished in {Duration}ms", request.ToolName, stopwatch.ElapsedMilliseconds);
 
             return new ToolResponse
             {
@@ -97,7 +91,7 @@ public class ToolExecutionService
         catch (Exception ex)
         {
             stopwatch.Stop();
-            _logger.LogError(ex, $"Tool '{request.ToolName}' execution failed");
+            _logger.LogError(ex, "[TOOL-FAIL] {ToolName} failed after {Duration}ms", request.ToolName, stopwatch.ElapsedMilliseconds);
 
             return new ToolResponse
             {

@@ -1,5 +1,6 @@
-namespace Shared;
+namespace McpServerRefrigerator.Models;
 
+// refrigerator domain models
 public class TemperatureSettings
 {
     public double FridgeTemp { get; set; } = 37.0; // Fahrenheit
